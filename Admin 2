@@ -14,24 +14,10 @@ class TicketManager:
     def __init__(self):
         self.tickets = []
         self.seat_limits = {
-            'CARRIBEAN': 200,
-            'MEDITERRANEAN A': 100,
-            'MEDITERRANEAN B': 100,
-            'ARCTIC': 100,
-            'SOUTHERN': 300,
-            'INDIAN': 100,
-            'ATLANTIC': 75,
-            'PACIFIC': 50,
+            'CARRIBEAN': 200,'MEDITERRANEAN A': 100, 'MEDITERRANEAN B': 100, 'ARCTIC': 100, 'SOUTHERN': 300, 'INDIAN': 100, 'ATLANTIC': 75, 'PACIFIC': 50,
         }
         self.seat_counts = {
-            'CARRIBEAN': 0,
-            'MEDITERRANEAN A': 0,
-            'MEDITERRANEAN B': 0,
-            'ARCTIC': 0,
-            'SOUTHERN': 0,
-            'INDIAN': 0,
-            'ATLANTIC': 0,
-            'PACIFIC': 0,
+            'CARRIBEAN': 0, 'MEDITERRANEAN A': 0, 'MEDITERRANEAN B': 0, 'ARCTIC': 0, 'SOUTHERN': 0, 'INDIAN': 0, 'ATLANTIC': 0, 'PACIFIC': 0,
         }
 
     def create_ticket(self, ticket):
@@ -83,7 +69,7 @@ class TicketManager:
 class TicketManagerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("JOT Manajer Tiket JKT48")
+        self.root.title("JOT Ticket Management JKT48 SHANI GRADUATION CONCERT : Last Voyage")
         self.manager = TicketManager()
         self.price_to_seat = {
             'CARRIBEAN IDR 350.000': 'CARRIBEAN',
@@ -96,7 +82,7 @@ class TicketManagerApp:
             'PACIFIC IDR 4.800.000': 'PACIFIC',
         }
         self.create_styles()
-        self.show_welcome_screen()
+        self.create_main_widgets()
 
     def create_styles(self):
         style = ttk.Style()
@@ -118,15 +104,6 @@ class TicketManagerApp:
     def clear_widgets(self):
         for widget in self.root.winfo_children():
             widget.destroy()
-
-    def show_welcome_screen(self):
-        self.clear_widgets()
-
-        welcome_label = ttk.Label(self.root, text="SHANI GRADUATION CONCERT : Last Voyage", font=("Helvetica", 16, "bold"), background="#1E88E5", foreground="white")
-        welcome_label.pack(pady=40)
-
-        next_button = ttk.Button(self.root, text="Next", command=self.create_main_widgets, style="TButton")
-        next_button.pack(pady=20)
 
     def create_main_widgets(self):
         self.clear_widgets()
@@ -176,17 +153,15 @@ class TicketManagerApp:
         ttk.Button(self.button_frame, text="Update", command=self.update_ticket, style="TButton").grid(row=0, column=1, padx=5, pady=5)
         ttk.Button(self.button_frame, text="Hapus", command=self.delete_ticket, style="TButton").grid(row=0, column=2, padx=5, pady=5)
         ttk.Button(self.button_frame, text="Impor CSV", command=self.import_csv, style="TButton").grid(row=0, column=3, padx=5, pady=5)
-
         ttk.Button(self.button_frame, text="Urutkan berdasarkan Harga", command=self.sort_by_price, style="TButton").grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
     def update_seat_entry(self, event):
         price = self.price_var.get()
         seat = self.price_to_seat[price]
         seat_number = self.manager.seat_counts[seat] + 1
-        seat_number_str = f"{seat} {seat_number:03}"
         self.seat_number_entry.configure(state='normal')
         self.seat_number_entry.delete(0, tk.END)
-        self.seat_number_entry.insert(0, seat_number_str)
+        self.seat_number_entry.insert(0, f"{seat_number:03}")
         self.seat_number_entry.configure(state='readonly')
 
     def add_ticket(self):
@@ -224,11 +199,6 @@ class TicketManagerApp:
     def sort_by_price(self):
         self.manager.sort_tickets_by_price()
         self.update_treeview()
-
-    def search_by_event(self):
-        search_event = self.event_entry.get()
-        found_tickets = self.manager.search_tickets_by_event(search_event)
-        self.update_treeview(found_tickets)
 
     def update_treeview(self, tickets=None):
         if tickets is None:
