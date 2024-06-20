@@ -14,7 +14,7 @@ class TicketManager:
     def __init__(self):
         self.tickets = []
         self.seat_limits = {
-            'CARRIBEAN': 200,'MEDITERRANEAN A': 100, 'MEDITERRANEAN B': 100, 'ARCTIC': 100, 'SOUTHERN': 300, 'INDIAN': 100, 'ATLANTIC': 75, 'PACIFIC': 50,
+            'CARRIBEAN': 200, 'MEDITERRANEAN A': 100, 'MEDITERRANEAN B': 100, 'ARCTIC': 100, 'SOUTHERN': 300, 'INDIAN': 100, 'ATLANTIC': 75, 'PACIFIC': 50,
         }
         self.seat_counts = {
             'CARRIBEAN': 0, 'MEDITERRANEAN A': 0, 'MEDITERRANEAN B': 0, 'ARCTIC': 0, 'SOUTHERN': 0, 'INDIAN': 0, 'ATLANTIC': 0, 'PACIFIC': 0,
@@ -22,22 +22,26 @@ class TicketManager:
 
     def create_ticket(self, ticket):
         if self.seat_counts[ticket.seat] < self.seat_limits[ticket.seat]:
+            ticket.seat_number = self.seat_counts[ticket.seat] + 1
             self.tickets.append(ticket)
             self.seat_counts[ticket.seat] += 1
             return True
         else:
             return False
 
-    def update_ticket(self, ticket_id, event_name, date, price, seat, seat_number):
+    def update_ticket(self, ticket_id, event_name, date, price, seat):
         for ticket in self.tickets:
             if ticket.ticket_id == ticket_id:
                 if self.seat_counts[seat] < self.seat_limits[seat] or ticket.seat == seat:
+                    # Decrement count of the old seat category
                     self.seat_counts[ticket.seat] -= 1
+                    if ticket.seat != seat:
+                        ticket.seat_number = self.seat_counts[seat] + 1
                     ticket.event_name = event_name
                     ticket.date = date
                     ticket.price = price
                     ticket.seat = seat
-                    ticket.seat_number = seat_number
+                    # Increment count of the new seat category
                     self.seat_counts[seat] += 1
                     return True
                 else:
@@ -55,6 +59,9 @@ class TicketManager:
     def sort_tickets_by_price(self):
         self.tickets.sort(key=lambda ticket: ticket.price)
 
+    def search_tickets_by_event(self, event_name):
+        return [ticket for ticket in self.tickets if event_name.lower() in ticket.event_name.lower()]
+
     def import_from_csv(self, file_path):
         import csv
         with open(file_path, newline='', encoding='utf-8') as csvfile:
@@ -69,14 +76,14 @@ class TicketManagerApp:
         self.root.title("JOT Ticket Management JKT48 SHANI GRADUATION CONCERT : Last Voyage")
         self.manager = TicketManager()
         self.price_to_seat = {
-            'CARRIBEAN IDR 350.000': 'CARRIBEAN',
-            'MEDITERRANEAN A IDR 500.000': 'MEDITERRANEAN A',
-            'MEDITERRANEAN B IDR 500.000': 'MEDITERRANEAN B',
-            'ARCTIC IDR 700.000': 'ARCTIC',
-            'SOUTHERN IDR 1.000.000': 'SOUTHERN',
-            'INDIAN IDR 1.500.000': 'INDIAN',
-            'ATLANTIC IDR 2.500.000': 'ATLANTIC',
-            'PACIFIC IDR 4.800.000': 'PACIFIC',
+            'IDR 350.000': 'CARRIBEAN',
+            'IDR 500.000': 'MEDITERRANEAN A',
+            'IDR 500.000': 'MEDITERRANEAN B',
+            'IDR 700.000': 'ARCTIC',
+            'IDR 1.000.000': 'SOUTHERN',
+            'IDR 1.500.000': 'INDIAN',
+            'IDR 2.500.000': 'ATLANTIC',
+            'IDR 4.800.000': 'PACIFIC',
         }
         self.create_styles()
         self.create_main_widgets()
@@ -135,13 +142,19 @@ class TicketManagerApp:
         self.price_var = tk.StringVar()
         self.price_combobox = ttk.Combobox(self.form_frame, textvariable=self.price_var, state='readonly', style="TCombobox")
         self.price_combobox['values'] = list(self.price_to_seat.keys())
-        self.price_combobox.bind('<<ComboboxSelected>>', self.update_seat_entry)
         self.price_combobox.grid(row=3, column=1, padx=5, pady=5)
+
+        ttk.Label(self.form_frame, text="Seat:", style="TLabel").grid(row=4, column=0, padx=5, pady=5)
+        self.seat_entry = ttk.Entry(self.form_frame, style="TEntry")
+        self.seat_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.seat_entry.configure(state='readonly')
 
         ttk.Label(self.form_frame, text="Seat Number:", style="TLabel").grid(row=5, column=0, padx=5, pady=5)
         self.seat_number_entry = ttk.Entry(self.form_frame, style="TEntry")
         self.seat_number_entry.grid(row=5, column=1, padx=5, pady=5)
         self.seat_number_entry.configure(state='readonly')
+
+        self.price_combobox.bind('<<ComboboxSelected>>', self.update_seat_info)
 
         self.button_frame = ttk.Frame(self.root, padding="10 10 10 10", style="TFrame")
         self.button_frame.pack(fill=tk.X)
@@ -152,10 +165,14 @@ class TicketManagerApp:
         ttk.Button(self.button_frame, text="Impor CSV", command=self.import_csv, style="TButton").grid(row=0, column=3, padx=5, pady=5)
         ttk.Button(self.button_frame, text="Urutkan berdasarkan Harga", command=self.sort_by_price, style="TButton").grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-    def update_seat_entry(self, event):
+    def update_seat_info(self, event):
         price = self.price_var.get()
         seat = self.price_to_seat[price]
         seat_number = self.manager.seat_counts[seat] + 1
+        self.seat_entry.configure(state='normal')
+        self.seat_entry.delete(0, tk.END)
+        self.seat_entry.insert(0, seat)
+        self.seat_entry.configure(state='readonly')
         self.seat_number_entry.configure(state='normal')
         self.seat_number_entry.delete(0, tk.END)
         self.seat_number_entry.insert(0, f"{seat_number:03}")
@@ -175,20 +192,27 @@ class TicketManagerApp:
             messagebox.showerror("Error", "Seat limit reached for this category")
 
     def update_ticket(self):
-        selected_item = self.tree.selection()[0]
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a ticket to update")
+            return
+        selected_item = selected_item[0]
         ticket_id = self.tree.item(selected_item, 'values')[0]
         event_name = self.event_entry.get()
         date = self.date_entry.get()
         price = self.price_var.get()
         seat = self.price_to_seat[price]
-        seat_number = self.seat_number_entry.get()
-        if self.manager.update_ticket(ticket_id, event_name, date, price, seat, seat_number):
+        if self.manager.update_ticket(ticket_id, event_name, date, price, seat):
             self.update_treeview()
         else:
             messagebox.showerror("Error", "Seat limit reached for this category")
 
     def delete_ticket(self):
-        selected_item = self.tree.selection()[0]
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showerror("Error", "Please select a ticket to delete")
+            return
+        selected_item = selected_item[0]
         ticket_id = self.tree.item(selected_item, 'values')[0]
         self.manager.delete_ticket(ticket_id)
         self.update_treeview()
