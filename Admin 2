@@ -55,9 +55,6 @@ class TicketManager:
     def sort_tickets_by_price(self):
         self.tickets.sort(key=lambda ticket: ticket.price)
 
-    def search_tickets_by_event(self, event_name):
-        return [ticket for ticket in self.tickets if event_name.lower() in ticket.event_name.lower()]
-
     def import_from_csv(self, file_path):
         import csv
         with open(file_path, newline='', encoding='utf-8') as csvfile:
